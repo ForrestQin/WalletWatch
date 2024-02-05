@@ -11,12 +11,12 @@ import (
 	"time"
 )
 
-var database *mongo.Database
+var userDatabase *mongo.Database
 var userCollection *mongo.Collection
 
-func InitializeDatabaseSetting(client *mongo.Client) {
-	database = client.Database("WalletWatch")
-	userCollection = database.Collection("Users")
+func InitializeUserDatabaseSetting(client *mongo.Client) {
+	userDatabase = client.Database("WalletWatch")
+	userCollection = userDatabase.Collection("Users")
 }
 
 func CreateUser(newUser user.User) error {
@@ -31,7 +31,7 @@ func CreateUser(newUser user.User) error {
 }
 
 func GetUserList(limit, offset int64) ([]user.User, error) {
-	if database == nil || userCollection == nil {
+	if userDatabase == nil || userCollection == nil {
 		return nil, errors.New("Database not initialize!")
 	}
 	findOptions := options.Find()
@@ -50,4 +50,17 @@ func GetUserList(limit, offset int64) ([]user.User, error) {
 		return nil, errors.New("Retrieve data has error.")
 	}
 	return users, nil
+}
+
+func GetUserId(email, password string) (string, error) {
+	filter := bson.D{{"email", email}, {"password", password}}
+	var userEntity user.User
+	err := userCollection.FindOne(context.TODO(), filter).Decode(&userEntity)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return "", nil
+		}
+		return "", err
+	}
+	return userEntity.UserId.String(), nil
 }
